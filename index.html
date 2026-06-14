@@ -1,0 +1,2165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>xDailyBench</title>
+  <meta name="description" content="xDailyBench: a rubric-grounded benchmark of 248 expert-curated daily-life tasks for evaluating large language models on complex, open-ended real-user requests.">
+  <meta name="keywords" content="LLM evaluation, benchmark, rubric, daily-life tasks, agentic, capability diagnostics">
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <link rel="icon" type="image/svg+xml" href="static/images/bytedance-color.svg">
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="preload" href="static/fonts/ProductSans-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="static/fonts/ProductSans-Medium.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="static/fonts/ProductSans-Bold.ttf" as="font" type="font/ttf" crossorigin>
+  <style>
+    /* Product Sans font (matching gameworld-project.github.io) */
+    @font-face {
+      font-family: 'Product Sans';
+      src: url('static/fonts/ProductSans-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Product Sans';
+      src: url('static/fonts/ProductSans-Medium.ttf') format('truetype');
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Product Sans';
+      src: url('static/fonts/ProductSans-Bold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    /* 可选：优化页面排版，提升可读性 */
+    body {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      padding: 24px;
+      /* Original #78E6DC softened with ~40% white for a pastel mint */
+      background-color: #E9FBF9 !important;
+    }
+
+    /* Match html bg to the body's pastel mint so any viewport area that
+       extends past the last card (e.g. on tall monitors) is not painted with
+       the default browser white. Bulma's reset sets html { background:#fff },
+       so we need !important to win over it (Bulma loads after this style). */
+    html { scroll-behavior: smooth; background-color: #E9FBF9 !important; }
+    /* Account for fixed nav when jumping to section anchors */
+    #top, #pipeline, #stats, #leaderboard, #showcase {
+      scroll-margin-top: 72px;
+    }
+
+    /* Fixed top navigation: glassy bar with brand + section links */
+    .wfg-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      background: rgba(251, 253, 253, 0.78);
+      backdrop-filter: saturate(160%) blur(14px);
+      -webkit-backdrop-filter: saturate(160%) blur(14px);
+      border-bottom: 1px solid rgba(46, 60, 80, 0.08);
+      box-shadow: 0 1px 12px rgba(24, 39, 75, 0.04);
+    }
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      .wfg-nav { background: rgba(251, 253, 253, 0.96); }
+    }
+    .wfg-nav-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .wfg-nav-brand {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif;
+      font-weight: 800;
+      font-size: 1.05rem;
+      letter-spacing: -0.01em;
+      color: #0f1626;
+      text-decoration: none;
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .wfg-nav-brand:hover { color: #34b27d; }
+    .wfg-nav-logo {
+      /* SVG uses 1em sizing internally; scale it relative to the brand
+         text so the colour bars sit cap-height aligned with "Workflow-GYM". */
+      width: 1.35em;
+      height: 1.35em;
+      display: block;
+    }
+    .wfg-nav-links {
+      display: flex;
+      gap: clamp(6px, 1.4vw, 22px);
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    .wfg-nav-links a {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #2e3c50;
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      transition: background 0.18s ease, color 0.18s ease;
+      white-space: nowrap;
+    }
+    .wfg-nav-links a:hover {
+      color: #1f6e4d;
+      background: rgba(52, 178, 125, 0.10);
+    }
+    /* Pad the page so the hero isn't hidden under the fixed nav.
+       56px nav + 24px existing body padding-top, but body uses shorthand padding,
+       so explicitly set top here. */
+    body { padding-top: 80px !important; }
+    @media (max-width: 640px) {
+      .wfg-nav-inner { padding: 0 14px; height: 50px; }
+      body { padding-top: 74px !important; }
+      .wfg-nav-brand { font-size: 0.95rem; }
+      .wfg-nav-links a { padding: 5px 6px; font-size: 0.85rem; }
+    }
+
+    /* Card wrapper used to package homepage / pipeline / other sections */
+    .wfg-card {
+      background-color: #FBFDFD;
+      border: 3px solid #FBFDFD;
+      border-radius: 28px;
+      box-shadow:
+        0 28px 70px rgba(24, 39, 75, 0.09),
+        0 4px 12px rgba(24, 39, 75, 0.04);
+      padding: clamp(20px, 2.6vw, 32px);
+      margin: 22px auto;
+      width: calc(100% - 48px);
+      max-width: 1232px;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    /* When a card wraps a hero with full-bleed background image, drop inner padding so the image touches the card edge */
+    .wfg-card.is-imageframe {
+      padding: 0;
+    }
+
+    /* Unified card title placement: fixed at top-left of every wfg-card.
+       Override .cool-title's centering (margin: 0 auto + width: fit-content) so it left-anchors.
+       Also dial down the font-size / padding / spacing for a more compact section header. */
+    .wfg-card > .card-title {
+      margin: 0 0 16px 0 !important;
+      text-align: left;
+      font-size: 1.5rem !important;
+      padding-bottom: 0.25rem !important;
+      letter-spacing: 1px !important;
+      border-bottom-width: 3px !important;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+    }
+    /* 覆盖 Bulma 等默认字体，保证全站统一为 Product Sans */
+    html, body, button, input, select, textarea,
+    .title, .subtitle, .content, .navbar, .footer,
+    .publication-title, .publication-authors, .cool-title {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif !important;
+    }
+    code, pre, kbd, samp, .is-family-code {
+      font-family: ui-monospace, SFMono-Regular, "Roboto Mono", Menlo, Monaco, "Courier New", monospace !important;
+    }
+
+    /* Workflow-GYM hero (GameWorld-style stage + scrim + overlay) */
+    .wfg-hero { padding: 32px 0 16px; }
+    .wfg-hero-shell { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+    .wfg-hero-stage {
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      border: 12px solid #FBFDFD;
+      min-height: clamp(560px, 60vw, 820px);
+      isolation: isolate;
+      box-shadow:
+        0 28px 70px rgba(24, 39, 75, 0.09),
+        0 4px 12px rgba(24, 39, 75, 0.04);
+    }
+    .wfg-hero-bg {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; object-position: center center;
+      transform: scale(1.02);
+      filter: saturate(0.65) brightness(1.07);
+    }
+    .wfg-hero-scrim {
+      position: absolute; inset: 0; z-index: 1;
+      background:
+        radial-gradient(ellipse 90% 80% at center,
+          rgba(255,255,255,0.62) 0%,
+          rgba(255,255,255,0.66) 18%,
+          rgba(255,255,255,0.72) 36%,
+          rgba(255,255,255,0.79) 52%,
+          rgba(255,255,255,0.84) 68%,
+          rgba(255,255,255,0.88) 82%,
+          rgba(255,255,255,0.91) 92%,
+          rgba(255,255,255,0.93) 100%),
+        linear-gradient(180deg,
+          rgba(255,255,255,0.50) 0%,
+          rgba(255,255,255,0.40) 35%,
+          rgba(255,255,255,0.44) 65%,
+          rgba(255,255,255,0.54) 100%);
+    }
+    .wfg-hero-overlay {
+      position: absolute; inset: 0; z-index: 2;
+      display: grid; align-content: center; justify-items: center;
+      padding: clamp(42px, 7vw, 88px) clamp(24px, 7vw, 64px);
+      text-align: center;
+    }
+    .wfg-hero-overlay::before {
+      content: ''; position: absolute; inset: 50% auto auto 50%;
+      width: 120%; height: 110%;
+      transform: translate(-50%, -50%); border-radius: 50%;
+      background: radial-gradient(ellipse 60% 60% at center,
+        rgba(255,255,255,0.04) 0%,
+        rgba(255,255,255,0.06) 16%,
+        rgba(255,255,255,0.08) 30%,
+        rgba(255,255,255,0.10) 44%,
+        rgba(255,255,255,0.10) 58%,
+        rgba(255,255,255,0.08) 70%,
+        rgba(255,255,255,0.05) 80%,
+        rgba(255,255,255,0.02) 90%,
+        rgba(255,255,255,0) 100%);
+      filter: blur(12px);
+      pointer-events: none;
+    }
+    .wfg-hero-overlay > * { position: relative; z-index: 1; }
+
+    .wfg-hero-title {
+      max-width: 26ch; margin: 0 auto;
+      font-size: clamp(2.1rem, 4.6vw, 3.9rem);
+      font-weight: 600; line-height: 1.02;
+      letter-spacing: -0.035em; text-wrap: balance;
+      color: #0f1626;
+      text-shadow:
+        0 1px 0 rgba(255,255,255,0.85),
+        0 0 14px rgba(255,255,255,0.85),
+        0 10px 38px rgba(255,255,255,0.70);
+    }
+    .wfg-hero-title .wfg-brand { font-weight: 800; }
+
+    .wfg-hero-aff {
+      margin: 16px 0 0;
+      font-size: 1.05rem;
+      font-style: italic;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      color: #0f1626;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 4px 10px;
+    }
+    .wfg-hero-aff-item { white-space: nowrap; }
+    .wfg-hero-aff sup {
+      font-style: normal;
+      font-size: 0.7em;
+      font-weight: 700;
+      vertical-align: super;
+      margin-right: 1px;
+      color: #0f1626;
+    }
+
+    .wfg-hero-bullets {
+      max-width: min(96ch, 96%);
+      margin: 20px auto 0;
+      padding-left: 1.6em;
+      text-align: left;
+      color: #0f1626;
+      font-size: 1.06rem; line-height: 1.58;
+      font-style: normal;
+      list-style-type: disc;
+      list-style-position: outside;
+    }
+    .wfg-hero-bullets li {
+      margin: 6px 0;
+      display: list-item;
+      list-style-type: disc;
+    }
+    .wfg-hero-bullets li::marker {
+      color: #0f1626;
+      font-size: 1em;
+    }
+
+    /* CTA row below the abstract bullets. Pill buttons with a dark fill so
+       they stay legible on top of the frosted-glass scrim. The Dataset
+       button is intentionally non-interactive while the data is unreleased
+       — visually slightly faded + cursor:not-allowed. */
+    .wfg-hero-cta {
+      margin: 26px auto 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    .wfg-hero-cta .button {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', sans-serif;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      padding-left: 18px;
+      padding-right: 18px;
+      background-color: #0f1626;
+      color: #fcfdfb;
+      border: none;
+      transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .wfg-hero-cta .button:hover {
+      background-color: #1e2a44;
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(15, 22, 38, 0.18);
+    }
+    /* Icon container is height-anchored (1.2em) and width-auto so wide
+       wordmark logos like arXiv keep their native aspect ratio, while
+       square logos (HuggingFace) still render at 1.2em × 1.2em. */
+    .wfg-hero-cta .button .icon {
+      width: auto;
+      height: 1.2em;
+      margin-right: 6px;
+    }
+    .wfg-hero-cta .button .icon i { font-size: 1.15em; }
+    .wfg-hero-cta .button .icon img {
+      height: 1.2em;
+      width: auto;
+      max-width: 4em;
+      display: block;
+    }
+    /* The arXiv wordmark uses dark gray + maroon — both lose contrast on
+       the dark pill. A subtle brightness lift keeps it legible without
+       distorting the brand colours. */
+    .wfg-hero-cta .button .icon .wfg-arxiv-logo {
+      filter: brightness(1.55) contrast(1.05);
+    }
+    .wfg-hero-cta .button[aria-disabled="true"] {
+      opacity: 0.78;
+      cursor: not-allowed;
+    }
+    .wfg-hero-cta .button[aria-disabled="true"]:hover {
+      background-color: #0f1626;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Override project's static/css/index.css legacy rule (.teaser uses 'Google Sans' which falls back to system sans-serif). Force Product Sans throughout. */
+    .teaser, .teaser * {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif !important;
+    }
+
+    /* GameWorld-style body prose (matches .showcase-copy in gameworld-project).
+       Horizontal sizing intentionally aligned with .wfg-hero-bullets so every body-prose block uses the same left/right edge as the hero abstract.
+       Vertical paragraph rhythm: gap:10px + (p+p margin-top:2px) ≈ 12px, matching Pipeline. */
+    .gw-prose {
+      display: grid;
+      align-content: center;
+      gap: 10px;
+      max-width: min(96ch, 96%);
+      margin: 0 auto;
+    }
+    .gw-prose p {
+      margin: 0 !important;
+      color: #49586c !important;
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif !important;
+      font-size: 0.97rem !important;
+      line-height: 1.46 !important;
+      text-align: justify;
+      text-justify: inter-word;
+    }
+    .gw-prose p + p {
+      margin-top: 2px !important;
+    }
+    .gw-prose p strong { color: #2e3c50; }
+    .gw-prose p em { color: #5c6a80; }
+
+    /* Pipeline: side-by-side compact layout (text left, image right) */
+    .pipeline-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+      gap: clamp(16px, 2.2vw, 28px);
+      align-items: center;
+    }
+    /* For cards that host a side-by-side text+image layout, shrink the right padding so the image extends much closer to the card edge */
+    .wfg-card:has(.pipeline-layout) {
+      padding-right: clamp(10px, 1.2vw, 14px);
+    }
+
+    /* Data Statistics: side-by-side layout (text + table on left, near-square chart on right) */
+    .stats-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+      gap: clamp(20px, 2.5vw, 32px);
+      align-items: center;
+    }
+    .stats-layout .stats-copy { min-width: 0; }
+    .stats-layout .stats-copy h2 {
+      margin-top: 0;
+      margin-bottom: 14px;
+    }
+    .stats-layout .gw-prose {
+      max-width: 100%;
+      margin: 0;
+    }
+    .stats-layout .stats-figure { margin: 0; min-width: 0; }
+    .stats-layout .stats-figure img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 18px;
+    }
+    @media (max-width: 1100px) {
+      .stats-layout {
+        grid-template-columns: 1fr;
+        gap: 22px;
+      }
+      .stats-layout .stats-figure img {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+    }
+
+    /* Booktabs-style table (kept for potential reuse, not used by Data Statistics anymore) */
+    .stats-table {
+      width: 100%;
+      margin: 18px 0 0;
+      border-collapse: collapse;
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif;
+      font-size: 0.95rem;
+      color: #49586c;
+    }
+    .stats-table thead th { border-top: 2px solid #2e3c50; border-bottom: 1px solid #2e3c50; padding: 10px 12px; font-weight: 700; color: #2e3c50; text-align: center; white-space: nowrap; }
+    .stats-table thead th:first-child { text-align: left; }
+    .stats-table tbody td { padding: 8px 12px; text-align: center; border: none; }
+    .stats-table tbody td:first-child { text-align: left; font-weight: 600; color: #2e3c50; }
+    .stats-table tbody tr:last-child td { border-bottom: 2px solid #2e3c50; }
+
+    /* Data Statistics — new polished layout */
+    .stats-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .stats-lead {
+      margin: 0;
+      max-width: 88ch;
+      color: #49586c;
+      font-size: 0.99rem;
+      line-height: 1.6;
+    }
+    .stats-lead strong { color: #2e3c50; font-weight: 700; }
+    .stats-lead em { font-style: italic; font-weight: 600; color: #2e3c50; }
+
+    /* Three KPI cards for difficulty distribution */
+    .difficulty-cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .difficulty-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0.45));
+      border: 1px solid rgba(46, 60, 80, 0.10);
+      border-radius: 12px;
+      padding: 10px 12px 8px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "label pct"
+        "tasks pct"
+        "range range";
+      column-gap: 12px;
+      row-gap: 1px;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 1px 0 rgba(46, 60, 80, 0.04);
+    }
+    /* Color accent stripe at the top of each card */
+    .difficulty-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--accent, #93c5b3);
+    }
+    .difficulty-card.is-easy   { --accent: #34b27d; }
+    .difficulty-card.is-medium { --accent: #e0993a; }
+    .difficulty-card.is-hard   { --accent: #d65060; }
+
+    .diff-label {
+      grid-area: label;
+      align-self: end;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+      color: #2e3c50;
+    }
+    .diff-pct {
+      grid-area: pct;
+      align-self: center;
+      font-size: 1.8rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--accent, #2e3c50);
+      letter-spacing: -0.01em;
+    }
+    .diff-tasks {
+      grid-area: tasks;
+      align-self: start;
+      font-size: 0.82rem;
+      color: #49586c;
+    }
+    .diff-tasks strong {
+      font-weight: 700;
+      color: #2e3c50;
+      font-size: 0.92rem;
+    }
+    .diff-range {
+      grid-area: range;
+      font-size: 0.72rem;
+      letter-spacing: 0.2px;
+      color: #75859b;
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px dashed rgba(46, 60, 80, 0.14);
+    }
+    @media (max-width: 720px) {
+      .difficulty-cards { grid-template-columns: 1fr; }
+    }
+
+    /* Distribution chart figure (replaces previous .stats-figure for the stack layout) */
+    .stats-stack .stats-figure {
+      margin: 0;
+      text-align: center;
+    }
+    .stats-stack .stats-figure img {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      display: block;
+      border-radius: 18px;
+    }
+    .stats-stack .stats-figure figcaption {
+      margin-top: 2px;
+      font-size: 0.86rem;
+      color: #75859b;
+      letter-spacing: 0.2px;
+    }
+
+    /* Bottom row: donut chart on the left, vertical rolling rail on the right */
+    .stats-bottom-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(200px, 19%, 250px);
+      gap: clamp(16px, 2vw, 28px);
+      align-items: stretch;
+    }
+    @media (max-width: 900px) {
+      .stats-bottom-row { grid-template-columns: 1fr; }
+    }
+
+    /* Task category donut chart — interactive SVG replacing task_distribution_01.png */
+    .task-donut {
+      position: relative;
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .task-donut-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      overflow: visible;
+    }
+    .donut-arc {
+      transition: opacity 0.2s ease, filter 0.2s ease;
+      cursor: pointer;
+    }
+    .task-donut.is-hovered .donut-arc { opacity: 0.32; }
+    .task-donut.is-hovered .donut-arc.is-hot { opacity: 1; filter: brightness(1.06) drop-shadow(0 2px 6px rgba(46, 60, 80, 0.18)); }
+    .donut-primary-label {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      /* Donut SVG renders at ~0.69x of its 1100-wide viewBox. Inner-ring labels
+         are kept compact (14 px in viewBox ≈ 9.7 CSS px) because the small
+         slices (Multimedia & Creative, Scientific Computing) are tight on
+         arc-width. The outer ring carries the prominent labels. */
+      font-size: 14px;
+      font-weight: 700;
+      fill: #ffffff;
+      pointer-events: none;
+      paint-order: stroke;
+      stroke: rgba(46, 60, 80, 0.18);
+      stroke-width: 0.6;
+    }
+    .donut-primary-pct {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      fill: rgba(255, 255, 255, 0.94);
+      pointer-events: none;
+    }
+    .donut-secondary-label {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      font-size: 18px;
+      font-weight: 500;
+      fill: #49586c;
+      pointer-events: none;
+    }
+    .donut-leader {
+      fill: none;
+      stroke: #b6c0d0;
+      stroke-width: 0.9;
+      pointer-events: none;
+    }
+    .donut-center-bg {
+      fill: #ffffff;
+      stroke: rgba(46, 60, 80, 0.10);
+      stroke-width: 1;
+    }
+    .donut-center-text {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      fill: #2e3c50;
+      pointer-events: none;
+    }
+    .donut-tooltip {
+      position: absolute;
+      padding: 10px 14px;
+      background: rgba(28, 38, 54, 0.97);
+      color: #ffffff;
+      border-radius: 10px;
+      font-family: 'Product Sans', sans-serif;
+      font-size: 13px;
+      pointer-events: none;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 5;
+      box-shadow: 0 6px 18px rgba(24, 39, 75, 0.25);
+      transform: translate(0, 0);
+      left: 0;
+      top: 0;
+    }
+    .donut-tooltip.is-visible { opacity: 1; }
+    .donut-tooltip strong { display: block; font-weight: 700; font-size: 14.5px; margin-bottom: 3px; color: #ffffff; }
+    .donut-tooltip .donut-tip-meta { display: block; opacity: 1; font-size: 12.5px; color: rgba(255, 255, 255, 0.94); }
+    .donut-tooltip .donut-tip-meta b { font-weight: 700; color: #ffffff; }
+
+    /* Domain rolling rail — vertical infinite-scroll carousel of 6 primary categories.
+       Hovering any card pauses the loop and flips the card to a frosted-glass back
+       listing its secondary categories with task counts. */
+    .domain-rail {
+      position: relative;
+      width: 100%;
+      height: clamp(340px, 40vw, 440px);
+      overflow: hidden;
+      mask-image: linear-gradient(180deg,
+        rgba(0,0,0,0) 0%,
+        rgba(0,0,0,1) 12%,
+        rgba(0,0,0,1) 88%,
+        rgba(0,0,0,0) 100%);
+      -webkit-mask-image: linear-gradient(180deg,
+        rgba(0,0,0,0) 0%,
+        rgba(0,0,0,1) 12%,
+        rgba(0,0,0,1) 88%,
+        rgba(0,0,0,0) 100%);
+    }
+    .rail-track {
+      display: flex;
+      flex-direction: column;
+      gap: 26px;
+      animation: railScroll 32s linear infinite reverse;
+      will-change: transform;
+    }
+    .domain-rail:hover .rail-track { animation-play-state: paused; }
+    @keyframes railScroll {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-50%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .rail-track { animation: none; }
+    }
+
+    .rail-card {
+      flex: 0 0 auto;
+      width: 100%;
+      perspective: 900px;
+      cursor: default;
+    }
+    .rail-card-flip {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      transform-style: preserve-3d;
+      transition: transform 0.55s cubic-bezier(0.4, 0.0, 0.2, 1);
+      border-radius: 14px;
+    }
+    .rail-card:hover .rail-card-flip { transform: rotateY(180deg); }
+
+    .rail-card-front,
+    .rail-card-back {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow:
+        0 8px 22px rgba(24, 39, 75, 0.10),
+        0 2px 6px rgba(24, 39, 75, 0.04);
+    }
+    .rail-card-front {
+      background: #ffffff;
+      border: 1px solid rgba(46, 60, 80, 0.08);
+    }
+    .rail-card-front img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .rail-card-back {
+      transform: rotateY(180deg);
+      /* More opaque white so the dark sub-category labels stay legible over the
+         colourful screenshot bleeding through the frosted layer. */
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(18px) saturate(150%);
+      -webkit-backdrop-filter: blur(18px) saturate(150%);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    /* Fallback for browsers without backdrop-filter: keep readable opaque-ish white */
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      .rail-card-back { background: rgba(255, 255, 255, 0.96); }
+    }
+    .rail-card-back ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      row-gap: 4px;
+      font-size: 0.76rem;
+      color: #1d2839;
+    }
+    .rail-card-back li {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      line-height: 1.25;
+    }
+    .rail-card-back li .rail-sub-name {
+      color: #1d2839;
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .rail-card-back li b {
+      font-weight: 700;
+      color: var(--rail-accent, #2e3c50);
+      flex: 0 0 auto;
+      font-variant-numeric: tabular-nums;
+    }
+    .rail-card-back .rail-sub-name::before {
+      content: '·';
+      margin-right: 6px;
+      color: var(--rail-accent, #2e3c50);
+      opacity: 0.7;
+    }
+
+    .rail-caption {
+      margin-top: 5px;
+      text-align: center;
+      font-family: 'Caveat', 'Patrick Hand', 'Segoe Script', cursive;
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: rgba(46, 60, 80, 0.62);
+      letter-spacing: 0.4px;
+      line-height: 1;
+    }
+
+    /* Leaderboard panels & SVG charts.
+       Both panels are stacked in the same grid cell so the wrapper height stays
+       constant when switching tabs (no card-size jump). The taller SVG aspect
+       sets the cell height; the shorter one fades in over the same space. */
+    .lb-panels-wrap {
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+      position: relative;
+    }
+    .lb-panel {
+      grid-area: 1 / 1;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+    }
+    .lb-panel.is-active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    /* Override the external .leaderboard-tabs margin so the chart sits closer to the tab row. */
+    #leaderboard .leaderboard-tabs { margin-bottom: 0.35rem; }
+    .lb-chart {
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+      display: block;
+      overflow: visible;
+    }
+    .lb-chart .grid-line {
+      stroke: #e3e8ef;
+      stroke-dasharray: 4 4;
+      stroke-width: 1;
+    }
+    .lb-chart .axis-text {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      fill: #49586c;
+    }
+    .lb-chart .value-label {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      fill: #2e3c50;
+    }
+    .lb-chart .stack-label {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      fill: #ffffff;
+    }
+    .lb-chart .legend-text {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      fill: #2e3c50;
+    }
+    .lb-chart .axis-title {
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      fill: #2e3c50;
+    }
+
+    /* --- Bar interactivity ---
+       Each data rect carries class="bar". We use Web Animations API (see the
+       leaderboard <script> below) to play a left-to-right reveal whenever a
+       panel becomes active. Hover state is pure CSS: the hovered bar pops
+       (brightness + drop-shadow) while non-hovered bars dim. transform-box +
+       transform-origin make the scaleX(0)->scaleX(1) animation start from the
+       bar's left edge regardless of x. */
+    /* Per-row "show domain breakdown" button. The button is built lazily by
+       JS (see `mountRowButton` below) and inserted into each row <g> of the
+       Score SVG. The "+" / "−" glyph is drawn as two <line>s anchored on the
+       circle's geometric centre, so centring is exact (no font-metric drift). */
+    .lb-chart .lb-row-btn { cursor: pointer; }
+    .lb-chart .lb-row-btn .lb-row-btn-bg {
+      fill: #eef6f1;
+      stroke: #3aaf85;
+      stroke-width: 1.5;
+      transition: fill 0.15s, stroke 0.15s;
+    }
+    .lb-chart .lb-row-btn line {
+      stroke: #1f8a5f;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      pointer-events: none;
+      transition: stroke 0.15s, opacity 0.15s;
+    }
+    .lb-chart .lb-row-btn:hover .lb-row-btn-bg { fill: #d6f1e3; }
+    .lb-chart .lb-row-btn.is-active .lb-row-btn-bg { fill: #2f8a57; stroke: #1f8a5f; }
+    .lb-chart .lb-row-btn.is-active line { stroke: #ffffff; }
+    /* Toggle the vertical stroke off so the cross collapses to a minus
+       sign when the row is in the "open" state. */
+    .lb-chart .lb-row-btn.is-active .lb-row-btn-v { opacity: 0; }
+    /* Suppress the default black focus ring shown by Chromium / WebKit when
+       the SVG <g role="button" tabindex="0"> is clicked or focused via mouse.
+       Keyboard users still get a visible focus state via :focus-visible. */
+    .lb-chart .lb-row-btn:focus { outline: none; }
+    .lb-chart .lb-row-btn:focus-visible .lb-row-btn-bg { stroke-width: 2.5; }
+
+    /* Domain-breakdown panel that appears below the Score chart when a
+       row button is clicked. Mirrors the OSWorld-style per-category table
+       in the reference screenshot. */
+    .lb-domain-panel {
+      max-height: 0;
+      overflow: hidden;
+      margin-top: 0;
+      transition: max-height 0.35s ease, margin-top 0.25s ease, opacity 0.25s ease;
+      opacity: 0;
+    }
+    .lb-domain-panel.is-open {
+      max-height: 520px;
+      margin-top: 16px;
+      opacity: 1;
+    }
+    /* === FAQ accordion === */
+    /* Native <details>/<summary>-based collapsible items. The list grows
+       vertically; the first item ships open by default via the [open]
+       attribute in HTML. */
+    .faq-list { display: flex; flex-direction: column; gap: 10px; }
+    .faq-item {
+      border: 1px solid #e4e8eb;
+      border-radius: 12px;
+      background: #fcfdfc;
+      overflow: hidden;
+      transition: box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+    .faq-item[open] {
+      border-color: #c4e3cf;
+      box-shadow: 0 2px 10px rgba(15, 41, 55, 0.05);
+    }
+    .faq-item > summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 14px 18px;
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: #1f2a3a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: background 0.15s ease;
+    }
+    .faq-item > summary::-webkit-details-marker { display: none; }
+    .faq-item > summary::after {
+      content: '';
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-right: 2px solid #1f8a5f;
+      border-bottom: 2px solid #1f8a5f;
+      transform: rotate(45deg);
+      margin-right: 4px;
+      flex: 0 0 10px;
+      transition: transform 0.18s ease;
+    }
+    .faq-item[open] > summary::after { transform: rotate(-135deg); }
+    .faq-item > summary:hover { background: #f3f8f5; }
+    .faq-item > summary:focus-visible {
+      outline: 2px solid #1f8a5f;
+      outline-offset: -2px;
+    }
+    .faq-answer {
+      padding: 0 18px 16px;
+      color: #2e3c50;
+      font-size: 0.98rem;
+      line-height: 1.65;
+    }
+    .faq-answer p { margin: 4px 0 0; }
+    .faq-answer a {
+      color: #1f8a5f;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .faq-answer a:hover { color: #34b27d; }
+
+    /* === Per-model breakdown card === */
+    .lb-domain-card {
+      border: 1px solid #e1e7e3;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #fcfdfc 0%, #f7faf8 100%);
+      padding: 18px 20px 20px;
+      box-shadow: 0 1px 2px rgba(15, 41, 55, 0.03);
+    }
+    /* Header row: PER-MODEL BREAKDOWN label + model name on the left, KPI
+       tiles (Avg Pass + Pass@3) on the right. */
+    .lb-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #ecf1ee;
+    }
+    .lb-card-title { display: flex; flex-direction: column; gap: 3px; }
+    .lb-card-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.55px;
+      color: #6f7a87;
+      text-transform: uppercase;
+    }
+    .lb-card-model {
+      font-size: 1.18rem;
+      font-weight: 800;
+      color: #1f8a5f;
+      letter-spacing: 0.2px;
+    }
+    .lb-kpi-strip { display: flex; gap: 10px; }
+    .lb-kpi {
+      min-width: 108px;
+      padding: 8px 14px 9px;
+      border-radius: 10px;
+      background: #ffffff;
+      border: 1px solid #e4ece8;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .lb-kpi.is-max {
+      background: linear-gradient(135deg, #ecf8f0 0%, #d8efe2 100%);
+      border-color: #b6dec6;
+    }
+    .lb-kpi-label {
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.45px;
+      color: #6a7681;
+      text-transform: uppercase;
+    }
+    .lb-kpi-value {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: #14304a;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.05;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .lb-kpi.is-max .lb-kpi-value { color: #1f8a5f; }
+    /* Section: small uppercase title above each stat strip. */
+    .lb-section { margin-top: 14px; }
+    .lb-section-h {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #6f7a87;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    /* Per-domain stat grid: 6 tiles in a row on wide screens, collapses to 3
+       then 2 columns on narrower viewports. Each tile carries a domain
+       label, a value, and a small progress bar showing the value's position
+       relative to the dataset-wide maximum. */
+    .lb-tile-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .lb-tile {
+      border-radius: 10px;
+      background: #ffffff;
+      border: 1px solid #e8edea;
+      padding: 9px 10px 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .lb-tile:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(15, 41, 55, 0.08);
+    }
+    .lb-tile.is-max {
+      background: linear-gradient(135deg, #f1faf4 0%, #e3f3ea 100%);
+      border-color: #c4e3cf;
+    }
+    .lb-tile-label {
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.25px;
+      color: #6a7681;
+      text-transform: uppercase;
+      line-height: 1.3;
+      min-height: 2.6em;
+    }
+    .lb-tile-value {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #14304a;
+      font-variant-numeric: tabular-nums;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .lb-tile.is-max .lb-tile-value { color: #1f8a5f; }
+    .lb-tile-bar {
+      position: relative;
+      height: 4px;
+      background: #eef1f4;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .lb-tile-bar span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #a5d0b4, #6fb990);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+    .lb-tile.is-max .lb-tile-bar span {
+      background: linear-gradient(90deg, #2f8a57, #1f8a5f);
+    }
+    /* Difficulty chips: pill-shaped, left-aligned. Each chip carries a small
+       colored dot (green/amber/red) for Easy/Medium/Hard. */
+    .lb-chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .lb-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px 8px 14px;
+      border-radius: 999px;
+      background: #ffffff;
+      border: 1px solid #e8edea;
+      min-width: 132px;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .lb-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(15, 41, 55, 0.08);
+    }
+    .lb-chip.is-max {
+      background: linear-gradient(135deg, #f1faf4 0%, #e3f3ea 100%);
+      border-color: #c4e3cf;
+    }
+    .lb-chip-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.45px;
+      color: #6a7681;
+      text-transform: uppercase;
+      position: relative;
+      padding-left: 14px;
+    }
+    .lb-chip-label::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      transform: translateY(-50%);
+      background: #9aa6b8;
+    }
+    .lb-chip--easy   .lb-chip-label::before { background: #2f8a57; }
+    .lb-chip--medium .lb-chip-label::before { background: #d6a13b; }
+    .lb-chip--hard   .lb-chip-label::before { background: #c45656; }
+    .lb-chip-value {
+      font-size: 1.02rem;
+      font-weight: 800;
+      color: #14304a;
+      font-variant-numeric: tabular-nums;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .lb-chip.is-max .lb-chip-value { color: #1f8a5f; }
+    /* Column-leader star marker (used by KPI / tile / chip). */
+    .lb-best {
+      color: #d4a92a;
+      font-size: 0.78em;
+      line-height: 1;
+    }
+    /* Responsive: stack the header on narrow widths and shrink the tile
+       grid to 3 then 2 columns. */
+    @media (max-width: 900px) {
+      .lb-tile-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 600px) {
+      .lb-card-head { flex-direction: column; gap: 12px; }
+      .lb-tile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    .lb-chart rect.bar {
+      transform-box: fill-box;
+      transform-origin: 0% 50%;
+      transition: opacity 0.18s ease, filter 0.18s ease;
+      cursor: pointer;
+    }
+    .lb-chart rect.bar:hover {
+      filter: brightness(1.06) drop-shadow(0 2px 6px rgba(46, 60, 80, 0.22));
+    }
+    .lb-chart:hover rect.bar { opacity: 0.5; }
+    .lb-chart:hover rect.bar:hover { opacity: 1; }
+    /* When no bar is hovered, keep every bar fully visible. :has() makes this
+       precise; fallback above (.lb-chart:hover rect.bar { opacity:0.5 })
+       triggers on chart-area hover but only matters once a child is hovered. */
+    @supports selector(:has(*)) {
+      .lb-chart:hover rect.bar { opacity: 1; }
+      .lb-chart:has(rect.bar:hover) rect.bar:not(:hover) { opacity: 0.42; }
+    }
+
+    .pipeline-layout .pipeline-copy {
+      min-width: 0;
+    }
+    .pipeline-layout .pipeline-copy h2 {
+      margin-top: 0;
+      margin-bottom: 14px;
+    }
+    /* When .gw-prose sits inside the narrow column, allow it to use the full column width */
+    .pipeline-layout .gw-prose {
+      max-width: 100%;
+      margin: 0;
+    }
+    .pipeline-layout .pipeline-figure {
+      margin: 0;
+      min-width: 0;
+    }
+    .pipeline-layout .pipeline-figure img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 18px;
+    }
+    /* Stack vertically on smaller laptops / tablets / phones.
+       Breakpoint at 1100px avoids the awkward zone where the image is much shorter than the text and would float with large empty space top/bottom in the side-by-side layout. */
+    @media (max-width: 1100px) {
+      .pipeline-layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      .pipeline-layout .pipeline-figure img {
+        max-width: 920px;
+        margin: 0 auto;
+      }
+    }
+
+    /* ===== Show Case ===== */
+    .showcase-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .showcase-bar button {
+      background: #f1f5f4;
+      border: 1.5px solid transparent;
+      border-radius: 999px;
+      padding: 0.42rem 1.05rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #5a6675;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif;
+    }
+    .showcase-bar button:hover { color: #2c3e50; background: #e7efec; }
+    .showcase-bar button.is-active {
+      background: #eafaf2;
+      border-color: #3aaf85;
+      color: #1f8a5f;
+    }
+
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+    }
+    @media (max-width: 1024px) { .showcase-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 768px)  { .showcase-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 480px)  { .showcase-grid { grid-template-columns: 1fr; } }
+
+    .showcase-cell {
+      background: #ffffff;
+      border: 1px solid #eef1f4;
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      box-shadow: 0 2px 8px rgba(24, 39, 75, 0.05);
+    }
+    .showcase-cell:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 36px rgba(24, 39, 75, 0.13);
+    }
+    .showcase-cell .thumb {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      display: block;
+      background: #0e1116;
+    }
+    .showcase-cell .meta {
+      padding: 12px 14px 14px;
+    }
+    .showcase-cell .meta .tag-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .showcase-cell .meta .badge {
+      display: inline-block;
+      background: #eef6f2;
+      color: #1f8a5f;
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .showcase-cell .meta .steps {
+      margin-left: auto;
+      font-size: 0.72rem;
+      color: #9aa6b8;
+      font-weight: 600;
+    }
+    .showcase-cell .meta .title {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: #2e3c50;
+      line-height: 1.45;
+      /* Clamp to 4 lines so showcase titles of wildly different lengths still
+         produce cells with similar visual weight. Overflow is truncated with
+         an ellipsis; the full string remains accessible via the title="..."
+         attribute we set on the wrapper. */
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: calc(0.86rem * 1.45 * 3);
+    }
+    .showcase-empty {
+      text-align: center;
+      color: #9aa6b8;
+      padding: 40px 0;
+      font-weight: 600;
+    }
+
+    /* ===== Replayer modal ===== */
+    .replayer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(13, 18, 28, 0.62);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .replayer-overlay.is-open { display: flex; }
+    .replayer-modal {
+      background: #0f141b;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 1180px;
+      height: min(86vh, 760px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+    }
+    .replayer-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid #1e2733;
+      color: #e7edf5;
+    }
+    .replayer-head .rp-title {
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .replayer-head .rp-sub {
+      font-size: 0.78rem;
+      color: #8a97a8;
+      font-weight: 600;
+    }
+    .replayer-head .rp-close {
+      margin-left: auto;
+      background: #1c2530;
+      border: none;
+      color: #cdd6e2;
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      line-height: 1;
+      transition: background 0.15s;
+    }
+    .replayer-head .rp-close:hover { background: #2a3543; }
+
+    .replayer-body {
+      flex: 1;
+      display: grid;
+      /* [models | history | step result] — models column is the new tab column
+         that lets the user swap between different agents replaying the SAME
+         task. */
+      grid-template-columns: minmax(170px, 200px) minmax(0, 1fr) minmax(0, 1.25fr);
+      min-height: 0;
+    }
+    @media (max-width: 1100px) {
+      .replayer-body { grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1.15fr); }
+    }
+    @media (max-width: 860px) {
+      .replayer-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr) minmax(0,1fr); }
+    }
+
+    /* Far-left container — holds the model tabs on top and the task prompt
+       beneath them, sharing one grid column from .replayer-body. */
+    .rp-side {
+      background: #0e131b;
+      border-right: 1px solid #1e2733;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      min-width: 0;
+    }
+
+    /* Top sub-panel: model tabs (same task, different model rollouts). */
+    .rp-models {
+      padding: 14px 12px 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 0;
+      flex: 0 1 auto;
+    }
+    .rp-models h3,
+    .rp-prompt h3 {
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #6fe0ad;
+      font-weight: 700;
+      margin: 2px 6px 8px;
+      line-height: 1;
+    }
+
+    /* Bottom sub-panel: English prompt for the current task. */
+    .rp-prompt {
+      border-top: 1px solid #1e2733;
+      padding: 12px 14px 16px;
+      overflow-y: auto;
+      min-height: 0;
+      flex: 1 1 0;
+    }
+    .rp-prompt h3 { margin: 2px 0 8px; }
+    .rp-prompt-title {
+      color: #e2eaf4;
+      font-size: 0.88rem;
+      font-weight: 700;
+      line-height: 1.4;
+      margin: 0 0 10px;
+    }
+    .rp-prompt .body {
+      color: #cdd6e2;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .rp-prompt .empty {
+      color: #6c7a8c;
+      font-size: 0.78rem;
+      line-height: 1.55;
+      font-style: italic;
+    }
+    .rp-model {
+      background: #161f2a;
+      border: 1px solid #233040;
+      color: #c8d2df;
+      border-radius: 10px;
+      padding: 9px 11px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      font-family: 'Product Sans', 'Segoe UI', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, "Microsoft YaHei", Arial, sans-serif;
+    }
+    .rp-model:hover { background: #1b2735; border-color: #2f3e54; }
+    .rp-model.is-active {
+      background: #15241c;
+      border-color: #2f8a57;
+      color: #e1f6ec;
+      box-shadow: 0 0 0 1px rgba(47, 138, 87, 0.45) inset;
+    }
+    .rp-model .name {
+      font-weight: 700;
+      font-size: 0.84rem;
+      line-height: 1.2;
+    }
+    .rp-model .meta {
+      color: #8a97a8;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin-top: 3px;
+      font-variant-numeric: tabular-nums;
+    }
+    .rp-model.is-active .meta { color: #a3d6b7; }
+    /* On phone-width screens the side panel collapses to a horizontal strip
+       above the history: models become a row of scroll-snap chips and the
+       prompt drops to a small block under them. */
+    @media (max-width: 860px) {
+      .rp-side {
+        border-right: 0;
+        border-bottom: 1px solid #1e2733;
+        max-height: 40vh;
+      }
+      .rp-models {
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 10px 12px;
+        gap: 8px;
+      }
+      .rp-models h3 { display: none; }
+      .rp-model { flex: 0 0 auto; min-width: 120px; }
+      .rp-prompt {
+        max-height: 30vh;
+      }
+    }
+
+    /* Middle: full rollout history feed */
+    .rp-history {
+      background: #11171f;
+      overflow-y: auto;
+      padding: 18px 20px 24px;
+      min-height: 0;
+      border-right: 1px solid #1e2733;
+    }
+    .rp-h-query {
+      color: #c8d2df;
+      font-size: 0.86rem;
+      line-height: 1.55;
+      padding-bottom: 14px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid #1e2733;
+    }
+    .rp-h-query b {
+      color: #6fe0ad; display: block; margin-bottom: 5px;
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .rp-h-step {
+      padding: 4px 0 16px;
+      opacity: 0.55;
+      transition: opacity 0.2s;
+    }
+    .rp-h-step.is-current { opacity: 1; }
+    .rp-h-text {
+      color: #cdd6e2;
+      font-size: 0.9rem;
+      line-height: 1.62;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-bottom: 10px;
+    }
+    .rp-h-action {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #161f2a;
+      border: 1px solid #233040;
+      border-radius: 10px;
+      padding: 9px 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .rp-h-step.is-current .rp-h-action {
+      border-color: #2f8a57;
+      background: #15241c;
+    }
+    .rp-h-action:hover { background: #1b2735; }
+    .rp-h-action .ic {
+      flex: none; width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      color: #7fe3b1; font-size: 0.95rem;
+    }
+    .rp-h-action .lbl {
+      font-weight: 700; color: #e2eaf4; font-size: 0.82rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: nowrap;
+    }
+    .rp-h-action .val {
+      color: #9fb0c3; font-size: 0.8rem;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .rp-h-action .no {
+      margin-left: auto; flex: none;
+      color: #6c7a8c; font-size: 0.72rem; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Right: single-step rendered result */
+    .rp-result {
+      background: #0b0f15;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .rp-result-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #1e2733;
+      color: #e2eaf4;
+    }
+    .rp-result-head .rh-name {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-weight: 700; font-size: 0.86rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .rp-result-head .rh-name .ic { color: #7fe3b1; }
+    .rp-result-head .rh-time { color: #6c7a8c; font-size: 0.74rem; font-weight: 600; }
+    .rp-result-head .rh-toggle {
+      margin-left: auto;
+      display: inline-flex;
+      background: #161f2a;
+      border: 1px solid #233040;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .rp-result-head .rh-toggle button {
+      background: none; border: none; color: #8a97a8;
+      font-size: 0.74rem; font-weight: 700; cursor: pointer;
+      padding: 5px 11px; display: inline-flex; align-items: center; gap: 5px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .rp-result-head .rh-toggle button.is-active { background: #2f3a49; color: #e2eaf4; }
+    .rp-stage {
+      position: relative;
+      flex: 1;
+      background: #06080c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .rp-stage .rp-imgwrap {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .rp-stage img {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+    .rp-marker {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      margin: -15px 0 0 -15px;
+      border-radius: 50%;
+      border: 3px solid #ff4d5e;
+      background: rgba(255, 77, 94, 0.25);
+      box-shadow: 0 0 0 4px rgba(255, 77, 94, 0.22);
+      pointer-events: none;
+      display: none;
+      animation: rp-ping 1.1s ease-out infinite;
+    }
+    @keyframes rp-ping {
+      0%   { transform: scale(0.7); opacity: 1; }
+      70%  { transform: scale(1.35); opacity: 0.35; }
+      100% { transform: scale(1.35); opacity: 0; }
+    }
+    .rp-raw {
+      flex: 1;
+      overflow: auto;
+      margin: 0;
+      padding: 16px 18px;
+      color: #b9e8cf;
+      background: #06080c;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.8rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+      display: none;
+    }
+    .replayer-foot {
+      padding: 12px 18px;
+      border-top: 1px solid #1e2733;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: #c8d2df;
+    }
+    .replayer-foot button {
+      background: #1c2530;
+      border: none;
+      color: #e7edf5;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .replayer-foot button:hover { background: #2a3543; }
+    .replayer-foot .rp-play { background: #2f8a57; }
+    .replayer-foot .rp-play:hover { background: #36a166; }
+    .replayer-foot .rp-scrub {
+      flex: 1;
+      accent-color: #3aaf85;
+      cursor: pointer;
+    }
+    .replayer-foot .rp-count {
+      font-size: 0.82rem;
+      font-weight: 700;
+      min-width: 60px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .replayer-foot .rp-pct {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #8a97a8;
+      min-width: 40px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .replayer-foot .rp-speeds {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .replayer-foot .rp-speeds .lbl { font-size: 0.74rem; color: #8a97a8; font-weight: 600; margin-right: 2px; }
+    .replayer-foot .rp-speeds button {
+      width: auto; height: 30px; padding: 0 10px;
+      font-size: 0.74rem; font-weight: 700; border-radius: 8px;
+    }
+    .replayer-foot .rp-speeds button.is-active { background: #2f8a57; }
+    .rp-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8a97a8;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+  </style>
+  <style>
+    /* xDailyBench page-specific helpers layered on top of the template */
+    .xd-prose p { margin: 10px 0; color: #2b3648; font-size: 1.04rem; line-height: 1.62; }
+    .kpi-cards { display:flex; flex-wrap:wrap; gap:16px; justify-content:center; margin:6px 0 22px; }
+    .kpi-card { flex:1 1 150px; max-width:210px; background:#FBFDFD; border:1px solid rgba(46,60,80,0.10);
+      border-radius:18px; padding:18px 14px; text-align:center;
+      box-shadow:0 10px 26px rgba(24,39,75,0.06); }
+    .kpi-num { display:block; font-weight:800; font-size:2.0rem; line-height:1.05; color:#1f6e4d; letter-spacing:-0.02em; }
+    .kpi-label { display:block; margin-top:6px; font-size:0.92rem; color:#52607a; font-weight:600; }
+    .xd-table-wrap { overflow-x:auto; margin:14px 0 4px; }
+    table.xd-table { width:100%; border-collapse:collapse; font-size:0.94rem; background:#fff;
+      border-radius:14px; overflow:hidden; box-shadow:0 8px 22px rgba(24,39,75,0.06); }
+    table.xd-table th, table.xd-table td { padding:9px 12px; text-align:center; border-bottom:1px solid #eef1f5; }
+    table.xd-table th { background:#0f1626; color:#fcfdfb; font-weight:700; font-size:0.9rem; white-space:nowrap; }
+    table.xd-table td:first-child, table.xd-table th:first-child { text-align:left; }
+    table.xd-table tbody tr:hover { background:#f3faf7; }
+    table.xd-table td.best { color:#1f6e4d; font-weight:800; }
+    .tier-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle; }
+    .figure-card { text-align:center; }
+    .figure-card img { max-width:100%; height:auto; border-radius:14px; }
+    .figure-card figcaption { margin-top:10px; color:#52607a; font-size:0.92rem; font-style:italic; }
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:26px; align-items:center; }
+    @media (max-width: 860px){ .two-col{ grid-template-columns:1fr; } }
+    .pill-list { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 0; }
+    .pill-list span { background:rgba(52,178,125,0.12); color:#1f6e4d; border-radius:999px;
+      padding:5px 12px; font-size:0.86rem; font-weight:600; }
+    .lb-note { margin-top:10px; color:#6a768c; font-size:0.84rem; line-height:1.5; }
+    .copy-bibtex-btn { cursor:pointer; border:none; background:#0f1626; color:#fcfdfb; border-radius:10px;
+      padding:7px 14px; font-weight:600; font-size:0.9rem; }
+    .copy-bibtex-btn:hover { background:#1e2a44; }
+    .bibtex-header { display:flex; align-items:center; gap:14px; margin-bottom:10px; }
+    pre.bibtex-code { background:#0f1626; color:#e6edf3; border-radius:14px; padding:18px 20px;
+      overflow-x:auto; font-size:0.86rem; line-height:1.55; }
+    .footer-mini { text-align:center; color:#6a768c; font-size:0.9rem; padding:26px 0 40px; }
+  </style>
+</head>
+<body>
+  <nav class="wfg-nav" aria-label="Page sections">
+    <div class="wfg-nav-inner">
+      <a class="wfg-nav-brand" href="#top">
+        <img class="wfg-nav-logo" src="static/images/bytedance-color.svg" alt="ByteDance"/>
+        <span>xDailyBench</span>
+      </a>
+      <div class="wfg-nav-links">
+        <a href="#pipeline">Pipeline</a>
+        <a href="#stats">Data Statistics</a>
+        <a href="#leaderboard">Leaderboard</a>
+        <a href="#capability">Capability</a>
+        <a href="#failure">Failure Analysis</a>
+        <a href="#bibtex">BibTeX</a>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main-content">
+  <section class="wfg-hero" id="top">
+    <div class="wfg-hero-shell">
+      <div class="wfg-hero-stage">
+        <img class="wfg-hero-bg" src="static/images/background.png" alt="xDailyBench hero background" />
+        <div class="wfg-hero-scrim" aria-hidden="true"></div>
+        <div class="wfg-hero-overlay">
+          <h1 class="wfg-hero-title">
+            <span class="wfg-brand">xDailyBench</span>: A Rubric-Grounded Benchmark for Evaluating LLMs on Real-World Daily-Life Tasks
+          </h1>
+          <p class="wfg-hero-aff">
+            <span class="wfg-hero-aff-item"><sup>1</sup>ByteDance Seed,</span>
+            <span class="wfg-hero-aff-item"><sup>2</sup>Peking University</span>
+          </p>
+          <ul class="wfg-hero-bullets">
+            <li>xDailyBench is a benchmark designed to evaluate whether large language models can handle the complex, open-ended requests that real users encounter in daily life &mdash; rather than standardized exams or narrow domain tasks.</li>
+            <li>It comprises <strong>248 expert-curated tasks</strong> across <strong>56 scenario categories</strong> spanning personal life, white-collar work, and learning &amp; research, each paired with a fine-grained scoring rubric (mean 13.3 criteria per task).</li>
+            <li>A two-level capability taxonomy (5 L1 &times; 9 L2 dimensions) annotates every criterion, enabling multi-dimensional diagnostic profiling of model strengths and weaknesses without reliance on reference answers.</li>
+            <li>Evaluating nine frontier models, the best (GPT-5.5) reaches only a <strong>0.730</strong> criterion-level pass rate and all models fall below 0.50 on the most demanding tier &mdash; losses concentrate in grounding and reasoning, not presentation.</li>
+          </ul>
+          <div class="wfg-hero-cta">
+            <span class="link-block">
+              <a href="#" aria-disabled="true" tabindex="-1" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><img class="wfg-arxiv-logo" src="static/images/arxiv-logo-1.png" alt="arXiv"/></span>
+                <span>Paper (Coming Soon)</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="#" aria-disabled="true" tabindex="-1" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><img src="static/images/hf-logo.svg" alt="HuggingFace logo"/></span>
+                <span>Dataset (Coming Soon)</span>
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="hero teaser" id="pipeline">
+    <div class="wfg-card">
+      <h2 class="cool-title title is-3 card-title">Construction Pipeline</h2>
+      <div class="xd-prose">
+        <p>
+          The construction of xDailyBench follows a rigorous, multi-stage pipeline that integrates expert knowledge, AI-assisted review, and iterative human quality control. Tasks are contributed by domain experts recruited through a crowdsourcing platform &mdash; researchers, graduate students, and senior practitioners across finance, healthcare, education, legal, and media &mdash; who submit scenarios identical or similar to those they genuinely encounter in their daily lives, professional workflows, or research.
+        </p>
+        <p>
+          Each task passes a four-stage quality-control loop: <strong>(1)</strong> AI pre-screening at submission, <strong>(2)</strong> AI-powered prompt &amp; rubric quality assessment (Gemini-3.1-Pro), <strong>(3)</strong> human expert review with &ge;2 rounds and &ge;2 reviewers, and <strong>(4)</strong> AI consistency verification that flags low human-machine agreement for revision. Only tasks passing all stages enter the final benchmark.
+        </p>
+      </div>
+      <figure class="figure-card" style="margin-top:18px;">
+        <img src="static/images/pipeline_wb.png" alt="xDailyBench end-to-end construction pipeline"/>
+        <figcaption>The end-to-end construction pipeline of xDailyBench: task sourcing &rarr; multi-layer quality control &rarr; rubric construction &rarr; capability-dimension annotation.</figcaption>
+      </figure>
+    </div>
+  </section>
+  <section class="hero teaser" id="stats">
+    <div class="wfg-card">
+      <h2 class="cool-title title is-3 card-title">Data Statistics</h2>
+      <p class="stats-lead">
+        xDailyBench covers a total of <strong>248 tasks</strong> across <strong>3 Level-1 domains</strong> (+1 Others) and <strong>56 Level-2 scenario categories</strong>, each paired with a human-written rubric (mean 13.3 criteria per task) and annotated with a two-level capability taxonomy.
+      </p>
+
+      <div class="kpi-cards">
+        <div class="kpi-card"><span class="kpi-num">248</span><span class="kpi-label">Expert-curated tasks</span></div>
+        <div class="kpi-card"><span class="kpi-num">56</span><span class="kpi-label">L2 scenario categories</span></div>
+        <div class="kpi-card"><span class="kpi-num">13.3</span><span class="kpi-label">Mean rubric criteria / task</span></div>
+        <div class="kpi-card"><span class="kpi-num">5&times;9</span><span class="kpi-label">L1 &times; L2 capability dims</span></div>
+        <div class="kpi-card"><span class="kpi-num">9</span><span class="kpi-label">Frontier models evaluated</span></div>
+      </div>
+
+      <div class="two-col">
+        <figure class="figure-card">
+          <img src="static/images/task_composition.png" alt="xDailyBench nested task composition donut"/>
+          <figcaption>Nested task composition: distribution of 248 tasks across L1 domains (inner ring) and L2 scenarios (outer ring).</figcaption>
+        </figure>
+        <div>
+          <div class="xd-table-wrap">
+            <table class="xd-table">
+              <thead><tr><th>L1 Domain</th><th>Tasks</th><th>% of Total</th><th>L2 Cats</th></tr></thead>
+              <tbody>
+                <tr><td>Personal Life</td><td>104</td><td>41.9%</td><td>26</td></tr>
+                <tr><td>White-Collar Work</td><td>92</td><td>33.1%</td><td>13</td></tr>
+                <tr><td>Learning &amp; Research</td><td>48</td><td>19.4%</td><td>14</td></tr>
+                <tr><td>Others</td><td>14</td><td>5.6%</td><td>3</td></tr>
+                <tr><td><strong>Total</strong></td><td><strong>248</strong></td><td><strong>100%</strong></td><td><strong>56</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p style="margin-top:14px; color:#52607a; font-size:0.92rem;">Representative L2 categories:</p>
+          <div class="pill-list">
+            <span>Legal consultation (16)</span><span>Shopping decisions (15)</span>
+            <span>Project management (14)</span><span>Content creation (12)</span>
+            <span>Creative planning (11)</span><span>Data analysis (9)</span>
+            <span>Info retrieval (9)</span><span>Document formatting (9)</span>
+            <span>Academic writing (9)</span><span>Financial planning (9)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="hero teaser" id="leaderboard">
+    <div class="wfg-card">
+      <h2 class="cool-title title is-3 card-title">Leaderboard</h2>
+      <p class="stats-lead">
+        Nine frontier worker models are evaluated on the agentic harness and scored by a single fixed LLM judge (Claude Opus 4.7), with bootstrap 95% confidence intervals. Models split into three tiers: a top cluster, a mid-band, and a collapsed long tail.
+      </p>
+
+      <div class="leaderboard-tabs" id="lbTabs">
+        <button class="is-active" data-tab="overall">Overall Pass Rate</button>
+        <button data-tab="difficulty">Difficulty-Stratified</button>
+        <button data-tab="importance">Importance-Stratified</button>
+      </div>
+
+      <div class="lb-panels-wrap">
+        <div class="lb-panel is-active" data-panel="chart">
+          <svg id="lbChart" class="lb-chart" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet" role="img" aria-label="xDailyBench leaderboard"></svg>
+        </div>
+      </div>
+
+      <div class="xd-table-wrap" style="margin-top:18px;">
+        <table class="xd-table">
+          <thead><tr><th>Rank</th><th>Model</th><th>Pass rate</th><th>95% CI</th><th>Routine</th><th>Interm.</th><th>Demanding</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><span class="tier-dot" style="background:#4a85c4"></span>GPT-5.5</td><td class="best">0.730</td><td>[0.695, 0.764]</td><td>0.939</td><td>0.781</td><td>0.468</td></tr>
+            <tr><td>2</td><td><span class="tier-dot" style="background:#4a85c4"></span>Claude Opus 4.7</td><td>0.692</td><td>[0.655, 0.728]</td><td>0.936</td><td>0.680</td><td>0.460</td></tr>
+            <tr><td>3</td><td><span class="tier-dot" style="background:#4a85c4"></span>Qwen3.7-Max</td><td>0.664</td><td>[0.628, 0.701]</td><td>0.886</td><td>0.716</td><td>0.387</td></tr>
+            <tr><td>4</td><td><span class="tier-dot" style="background:#4a85c4"></span>DeepSeek-V4-Pro</td><td>0.660</td><td>[0.624, 0.697]</td><td>0.873</td><td>0.674</td><td>0.433</td></tr>
+            <tr><td>5</td><td><span class="tier-dot" style="background:#2f8a57"></span>Qwen3.6-Max-Preview</td><td>0.614</td><td>[0.575, 0.653]</td><td>0.874</td><td>0.592</td><td>0.373</td></tr>
+            <tr><td>6</td><td><span class="tier-dot" style="background:#2f8a57"></span>GLM-5.1</td><td>0.589</td><td>[0.544, 0.634]</td><td>0.869</td><td>0.582</td><td>0.312</td></tr>
+            <tr><td>7</td><td><span class="tier-dot" style="background:#2f8a57"></span>Doubao Seed 2.0 Pro</td><td>0.549</td><td>[0.513, 0.587]</td><td>0.782</td><td>0.553</td><td>0.309</td></tr>
+            <tr><td>8</td><td><span class="tier-dot" style="background:#cf8642"></span>Gemini-3.1-Pro</td><td>0.352</td><td>[0.310, 0.396]</td><td>0.575</td><td>0.324</td><td>0.154</td></tr>
+            <tr><td>9</td><td><span class="tier-dot" style="background:#cf8642"></span>Kimi-K2.6</td><td>0.218</td><td>[0.179, 0.261]</td><td>0.360</td><td>0.195</td><td>0.097</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="lb-note">
+        Switching task-level aggregation from uniform to importance-weighted yields Spearman &rho; = 1.000 (zero rank flips). Across a 4&times; sweep of step budget (60&ndash;240) and context window (64k&ndash;256k), scores with clean ablation runs stay on a plateau (range &le; 0.07, non-monotonic) &mdash; the bottleneck is model capability, not interaction budget.
+      </p>
+    </div>
+  </section>
+  <section class="hero teaser" id="capability">
+    <div class="wfg-card">
+      <h2 class="cool-title title is-3 card-title">Capability Profiling</h2>
+      <p class="stats-lead">
+        Every rubric criterion is tagged with a capability dimension (5 L1 &times; 9 L2). Aggregating per dimension turns a flat score into a structured capability profile. <strong>Presentation is uniformly high and no longer separates models, whereas Correctness opens the widest gap</strong> between the top tier and the long tail.
+      </p>
+      <div class="two-col">
+        <figure class="figure-card">
+          <img src="static/images/l1_radar.jpg" alt="L1 capability radar for four annotated models"/>
+          <figcaption>L1 capability profile (criterion-level pass rate) for the four annotated workers.</figcaption>
+        </figure>
+        <div>
+          <div class="xd-table-wrap">
+            <table class="xd-table">
+              <thead><tr><th>L1 Dimension</th><th>Opus-4.7</th><th>DeepSeek-V4</th><th>Doubao-2.0Pro</th><th>Kimi-K2.6</th></tr></thead>
+              <tbody>
+                <tr><td>Correctness</td><td>0.527</td><td class="best">0.535</td><td>0.291</td><td>0.362</td></tr>
+                <tr><td>Compliance</td><td class="best">0.564</td><td>0.543</td><td>0.382</td><td>0.400</td></tr>
+                <tr><td>Sufficiency</td><td class="best">0.647</td><td>0.593</td><td>0.485</td><td>0.415</td></tr>
+                <tr><td>Harmlessness</td><td class="best">0.652</td><td>0.554</td><td>0.378</td><td>0.482</td></tr>
+                <tr><td>Presentation</td><td>0.641</td><td class="best">0.694</td><td>0.617</td><td>0.413</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="title is-5" style="margin-top:26px;">L2 Weakness Localization</h3>
+      <div class="xd-prose"><p>
+        Grounding is uniformly low (0.23&ndash;0.44): models assert conclusions without sufficiently citing concrete source evidence. Reasoning is likewise weak, especially in the second tier. In contrast, execution is a clear strength of the strong models (Opus 0.706, DeepSeek 0.649). The bulk of zero-scored criteria fall into <strong>grounding, reasoning, and accuracy</strong> rather than presentation &mdash; setting the improvement priority on sourcing and cross-source reasoning.
+      </p></div>
+      <div class="xd-table-wrap">
+        <table class="xd-table">
+          <thead><tr><th>L2 Dimension</th><th>Opus-4.7</th><th>DeepSeek-V4</th><th>Doubao-2.0Pro</th><th>Kimi-K2.6</th></tr></thead>
+          <tbody>
+            <tr><td>Accuracy (computation/fact)</td><td>0.544</td><td class="best">0.548</td><td>0.295</td><td>0.413</td></tr>
+            <tr><td>Reasoning (judgment)</td><td>0.490</td><td class="best">0.505</td><td>0.282</td><td>0.253</td></tr>
+            <tr><td>Compliance (instruction following)</td><td class="best">0.551</td><td>0.534</td><td>0.368</td><td>0.404</td></tr>
+            <tr><td>Execution (parsing/tool use)</td><td class="best">0.706</td><td>0.649</td><td>0.533</td><td>0.357</td></tr>
+            <tr><td>Completeness</td><td class="best">0.676</td><td>0.627</td><td>0.520</td><td>0.430</td></tr>
+            <tr><td>Grounding (sourcing)</td><td class="best">0.436</td><td>0.370</td><td>0.231</td><td>0.321</td></tr>
+            <tr><td>Boundary (caution)</td><td class="best">0.652</td><td>0.554</td><td>0.378</td><td>0.482</td></tr>
+            <tr><td>Presentation (formatting)</td><td>0.641</td><td class="best">0.694</td><td>0.617</td><td>0.413</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  <section class="hero teaser" id="failure">
+    <div class="wfg-card">
+      <h2 class="cool-title title is-3 card-title">Failure Analysis</h2>
+      <p class="stats-lead">
+        The two long-tail models fail in nearly opposite ways: <strong>Gemini-3.1-Pro fails by doing too much and never converging</strong>, whereas <strong>Kimi-K2.6 fails by doing too little and stopping too early</strong>. Yet both share one upstream mistake &mdash; redirecting tasks solvable from the supplied attachments toward the web or parametric knowledge.
+      </p>
+      <div class="xd-table-wrap">
+        <table class="xd-table">
+          <thead><tr><th>Failure mode</th><th>Trigger</th><th>Trace signature</th></tr></thead>
+          <tbody>
+            <tr><td>Retrieval over-reliance</td><td>Task solvable from supplied attachments is redirected to web search or parametric knowledge</td><td>High share of search/fetch calls; attachments read late or never</td></tr>
+            <tr><td>Non-recovery from tool failure</td><td>A tool errors out and the model neither rewrites the query, switches tools, nor falls back to local computation</td><td>Repeated near-identical calls after an error; no strategy change</td></tr>
+            <tr><td>Repetitive action looping</td><td>The model re-issues an action that did not advance the task</td><td>Long runs of consecutive identical calls; budget consumed without output</td></tr>
+            <tr><td>Premature termination</td><td>The model abandons the task after a brief look instead of entering the read&ndash;plan&ndash;act&ndash;deliver loop</td><td>Very few tool calls; no deliverable file written; short chat-only reply</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="two-col" style="margin-top:22px; align-items:start;">
+        <div>
+          <h3 class="title is-6" style="margin-bottom:8px;">Gemini-3.1-Pro &mdash; failure by over-action</h3>
+          <div class="xd-prose"><p style="font-size:0.98rem;">
+            Web search becomes its default action: 40% of all tool calls in the low-score group are web searches (vs. 11% when it succeeds). When search times out it re-issues an even longer query &mdash; a &ldquo;timeout, worse retry, timeout&rdquo; loop forms and the run hits the step-budget ceiling, ending with an empty or partial reply. The most predictive sign of a failed Gemini task is that it touches the budget cap.
+          </p></div>
+        </div>
+        <div>
+          <h3 class="title is-6" style="margin-bottom:8px;">Kimi-K2.6 &mdash; failure by under-action</h3>
+          <div class="xd-prose"><p style="font-size:0.98rem;">
+            The mirror image: ~10 tool calls on average, roughly a third of failed tasks finish with three or fewer calls. Only about a quarter ever write a file, so &gt;70% produce no target artifact and answer purely in chat. Many rubric criteria check concrete artifacts, so absent files score zero by default &mdash; directly explaining Kimi&rsquo;s collapse on the necessary tier.
+          </p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="hero teaser" id="bibtex">
+    <div class="wfg-card">
+      <div class="bibtex-header">
+        <h2 class="cool-title title is-3 card-title" style="margin:0!important;border:none!important;">BibTeX</h2>
+        <button class="copy-bibtex-btn" onclick="copyBibTeX()"><i class="fas fa-copy"></i> Copy</button>
+      </div>
+      <pre class="bibtex-code" id="bibtex-code"><code>@misc{xdailybench2026,
+  title  = {xDailyBench: A Rubric-Grounded Benchmark for Evaluating LLMs on Real-World Daily-Life Tasks},
+  author = {ByteDance Seed and Peking University},
+  year   = {2026},
+  note   = {Project page},
+}</code></pre>
+    </div>
+  </section>
+  </main>
+
+  <footer class="footer-mini">
+    <p>xDailyBench &middot; ByteDance Seed &amp; Peking University &middot; Page styled with the academic project template.</p>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css"></script>
+  <script>
+  // ---- Interactive leaderboard chart (data-driven SVG) ----
+  (function(){
+    var SVGNS = "http://www.w3.org/2000/svg";
+    var models = [
+      {name:"GPT-5.5",             tier:"#4a85c4", overall:0.730, ciLo:0.695, ciHi:0.764, diff:[0.939,0.781,0.468], imp:[0.733,0.753,0.607]},
+      {name:"Claude Opus 4.7",     tier:"#4a85c4", overall:0.692, ciLo:0.655, ciHi:0.728, diff:[0.936,0.680,0.460], imp:[0.692,0.747,0.618]},
+      {name:"Qwen3.7-Max",         tier:"#4a85c4", overall:0.664, ciLo:0.628, ciHi:0.701, diff:[0.886,0.716,0.387], imp:[0.670,0.682,0.483]},
+      {name:"DeepSeek-V4-Pro",     tier:"#4a85c4", overall:0.660, ciLo:0.624, ciHi:0.697, diff:[0.873,0.674,0.433], imp:[0.675,0.678,0.494]},
+      {name:"Qwen3.6-Max-Preview", tier:"#2f8a57", overall:0.614, ciLo:0.575, ciHi:0.653, diff:[0.874,0.592,0.373], imp:[0.637,0.655,0.551]},
+      {name:"GLM-5.1",             tier:"#2f8a57", overall:0.589, ciLo:0.544, ciHi:0.634, diff:[0.869,0.582,0.312], imp:[0.631,0.656,0.455]},
+      {name:"Doubao Seed 2.0 Pro", tier:"#2f8a57", overall:0.549, ciLo:0.513, ciHi:0.587, diff:[0.782,0.553,0.309], imp:[0.557,0.546,0.438]},
+      {name:"Gemini-3.1-Pro",      tier:"#cf8642", overall:0.352, ciLo:0.310, ciHi:0.396, diff:[0.575,0.324,0.154], imp:[0.395,0.392,0.264]},
+      {name:"Kimi-K2.6",           tier:"#cf8642", overall:0.218, ciLo:0.179, ciHi:0.261, diff:[0.360,0.195,0.097], imp:[0.288,0.351,0.253]}
+    ];
+    var GROUPS = {
+      difficulty: [{label:"Routine",color:"#4a85c4"},{label:"Intermediate",color:"#2f8a57"},{label:"Demanding",color:"#cf8642"}],
+      importance: [{label:"Necessary",color:"#4a85c4"},{label:"Important",color:"#2f8a57"},{label:"Optional",color:"#cf8642"}]
+    };
+    var chart = document.getElementById("lbChart");
+    var X0 = 180, X1 = 940, Y0 = 64, Y1 = 488, MAX = 1.0;
+    function el(t,a){ var e=document.createElementNS(SVGNS,t); for(var k in a){ e.setAttribute(k,a[k]); } return e; }
+    function sx(v){ return X0 + (v/MAX)*(X1-X0); }
+    function clear(){ while(chart.firstChild) chart.removeChild(chart.firstChild); }
+    function axes(){
+      for(var t=0;t<=10;t+=2){
+        var x=sx(t/10);
+        chart.appendChild(el("line",{class:"grid-line",x1:x,y1:Y0,x2:x,y2:Y1}));
+        var tx=el("text",{class:"axis-text",x:x,y:Y1+24,"text-anchor":"middle"}); tx.textContent=(t/10).toFixed(1); chart.appendChild(tx);
+      }
+      chart.appendChild(el("line",{x1:X0,y1:Y1,x2:X1,y2:Y1,stroke:"#9aa6b8","stroke-width":1}));
+      var at=el("text",{class:"axis-title",x:(X0+X1)/2,y:Y1+50,"text-anchor":"middle"}); at.textContent="Criterion-level pass rate"; chart.appendChild(at);
+    }
+    function animate(){
+      var bars=chart.querySelectorAll("rect.bar");
+      bars.forEach(function(b){
+        var w=+b.getAttribute("width"), x=+b.getAttribute("x");
+        b.animate([{transform:"translateX(0px) scaleX(0.001)"},{transform:"translateX(0px) scaleX(1)"}],
+          {duration:650,easing:"cubic-bezier(.22,.61,.36,1)"});
+        b.style.transformBox="fill-box"; b.style.transformOrigin="left center";
+      });
+    }
+    function render(tab){
+      clear(); axes();
+      var n=models.length, band=(Y1-Y0)/n;
+      if(tab==="overall"){
+        models.forEach(function(m,i){
+          var cy=Y0+band*i+band/2, h=Math.min(22,band*0.5), y=cy-h/2;
+          var lbl=el("text",{class:"axis-text",x:X0-16,y:cy+4,"text-anchor":"end"}); lbl.textContent=m.name; chart.appendChild(lbl);
+          chart.appendChild(el("rect",{class:"bar",x:X0,y:y,width:sx(m.overall)-X0,height:h,rx:3,fill:m.tier}));
+          chart.appendChild(el("line",{x1:sx(m.ciLo),y1:cy,x2:sx(m.ciHi),y2:cy,stroke:"#3a4254","stroke-width":1.4}));
+          chart.appendChild(el("line",{x1:sx(m.ciLo),y1:cy-4,x2:sx(m.ciLo),y2:cy+4,stroke:"#3a4254","stroke-width":1.4}));
+          chart.appendChild(el("line",{x1:sx(m.ciHi),y1:cy-4,x2:sx(m.ciHi),y2:cy+4,stroke:"#3a4254","stroke-width":1.4}));
+          var v=el("text",{class:"value-label",x:sx(m.ciHi)+8,y:cy+4}); v.textContent=m.overall.toFixed(3); chart.appendChild(v);
+        });
+      } else {
+        var grp=GROUPS[tab], key=(tab==="difficulty"?"diff":"imp");
+        var lg=el("g",{transform:"translate("+(X0+10)+",28)"});
+        grp.forEach(function(g,j){
+          lg.appendChild(el("rect",{x:j*160,y:0,width:14,height:14,rx:2,fill:g.color}));
+          var lt=el("text",{class:"legend-text",x:j*160+20,y:12}); lt.textContent=g.label; lg.appendChild(lt);
+        });
+        chart.appendChild(lg);
+        models.forEach(function(m,i){
+          var top=Y0+band*i, sub=(band*0.78)/3;
+          var lbl=el("text",{class:"axis-text",x:X0-16,y:top+band/2+4,"text-anchor":"end"}); lbl.textContent=m.name; chart.appendChild(lbl);
+          m[key].forEach(function(val,j){
+            var y=top+band*0.11+sub*j, h=sub*0.82;
+            chart.appendChild(el("rect",{class:"bar",x:X0,y:y,width:sx(val)-X0,height:h,rx:2,fill:grp[j].color}));
+            var v=el("text",{class:"value-label",x:sx(val)+6,y:y+h-1}); v.textContent=val.toFixed(3); chart.appendChild(v);
+          });
+        });
+      }
+      animate();
+    }
+    var tabs=document.getElementById("lbTabs");
+    tabs.addEventListener("click",function(e){
+      var b=e.target.closest("button"); if(!b) return;
+      tabs.querySelectorAll("button").forEach(function(x){x.classList.remove("is-active");});
+      b.classList.add("is-active"); render(b.getAttribute("data-tab"));
+    });
+    render("overall");
+  })();
+
+  function copyBibTeX(){
+    var t=document.getElementById("bibtex-code").innerText;
+    navigator.clipboard.writeText(t).then(function(){
+      var btn=document.querySelector(".copy-bibtex-btn");
+      var old=btn.innerHTML; btn.innerHTML='<i class="fas fa-check"></i> Copied';
+      setTimeout(function(){btn.innerHTML=old;},1600);
+    });
+  }
+  </script>
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+</body>
+</html>
